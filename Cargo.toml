@@ -7,6 +7,8 @@ edition = "2018"
 [dependencies]
 winit = "0.19.1"
 log = "0.4.6"
+toml = "0.5.1"
+dirs = "2.0.1"
 
 [dependencies.cairo-rs]
 version = "0.6.0"

@@ -11,6 +11,7 @@ use std::os::raw::c_void;
 use winit::os::macos::{WindowBuilderExt, WindowExt};
 
 use super::DrawFn;
+use crate::Config;
 
 pub struct Window {
     pub window: winit::Window,
@@ -36,15 +37,16 @@ extern "C" fn draw_rect(this: &Object, _cmd: Sel, _rect: NSRect) {
         .unwrap();
 
         let d = (*this.get_ivar::<*const c_void>("drawFn")) as *const DrawFn;
+        let config = (*this.get_ivar::<*const c_void>("config")) as *const Config;
         {
             let cr = cairo::Context::new(&surface);
-            (*d)(&cr, width, height);
+            (*d)(&cr, &*config, width, height);
         }
     }
 }
 
 impl Window {
-    pub fn new(events_loop: &winit::EventsLoop, draw: &fn(&cairo::Context, f64, f64)) -> Window {
+    pub fn new(events_loop: &winit::EventsLoop, config: &Config, draw: &DrawFn) -> Window {
         let window = winit::WindowBuilder::new()
             .with_transparency(true)
             .with_activation_policy(winit::os::macos::ActivationPolicy::Accessory)
@@ -75,8 +77,9 @@ impl Window {
 
             // Make draw function available in the drawing callback
             let fn_ptr = draw as *const DrawFn;
-            let raw_ptr = fn_ptr as *const c_void;
             (*render_view).set_ivar("drawFn", fn_ptr as *const c_void);
+
+            (*render_view).set_ivar("config", config as *const _ as *const c_void);
 
             msg_send![ns_view, addSubview: render_view];
             render_view
@@ -103,6 +106,7 @@ fn make_draw_view_class() -> &'static objc::runtime::Class {
             draw_rect as extern "C" fn(&Object, Sel, NSRect),
         );
         decl.add_ivar::<*mut c_void>("drawFn");
+        decl.add_ivar::<*mut c_void>("config");
         decl.register()
     }
 }
