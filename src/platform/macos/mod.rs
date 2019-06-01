@@ -10,14 +10,12 @@ use objc::{
 use std::os::raw::c_void;
 use winit::os::macos::{WindowBuilderExt, WindowExt};
 
+use super::DrawFn;
+
 pub struct Window {
     pub window: winit::Window,
     render_view: *mut Object,
 }
-
-static mut DRAW_CB: std::mem::MaybeUninit<DrawFn> = std::mem::MaybeUninit::uninit();
-
-type DrawFn = fn(cr: &cairo::Context, width: f64, height: f64);
 
 extern "C" fn draw_rect(this: &Object, _cmd: Sel, _rect: NSRect) {
     unsafe {
@@ -37,15 +35,16 @@ extern "C" fn draw_rect(this: &Object, _cmd: Sel, _rect: NSRect) {
         )
         .unwrap();
 
+        let d = (*this.get_ivar::<*const c_void>("drawFn")) as *const DrawFn;
         {
             let cr = cairo::Context::new(&surface);
-            (DRAW_CB.read())(&cr, width, height);
+            (*d)(&cr, width, height);
         }
     }
 }
 
 impl Window {
-    pub fn new(events_loop: &winit::EventsLoop, draw: fn(&cairo::Context, f64, f64)) -> Window {
+    pub fn new(events_loop: &winit::EventsLoop, draw: &fn(&cairo::Context, f64, f64)) -> Window {
         let window = winit::WindowBuilder::new()
             .with_transparency(true)
             .with_activation_policy(winit::os::macos::ActivationPolicy::Accessory)
@@ -75,12 +74,9 @@ impl Window {
             let render_view: id = msg_send![render_view, initWithFrame: view_frame];
 
             // Make draw function available in the drawing callback
-            DRAW_CB.write(draw);
-
-            // TODO: Use ivar with static fn pointer, currently causing segfaults in release mode
-            // let fn_ptr = &(*draw as DrawFn) as *const DrawFn;
-            // let raw_ptr = fn_ptr as *const c_void;
-            // (*render_view).set_ivar("drawFn", fn_ptr as *const c_void);
+            let fn_ptr = draw as *const DrawFn;
+            let raw_ptr = fn_ptr as *const c_void;
+            (*render_view).set_ivar("drawFn", fn_ptr as *const c_void);
 
             msg_send![ns_view, addSubview: render_view];
             render_view

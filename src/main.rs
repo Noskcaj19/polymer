@@ -12,22 +12,26 @@ fn draw(cr: &cairo::Context, width: f64, height: f64) {
 }
 
 fn main() {
-    let mut events_loop = winit::EventsLoop::new();
+    let draw_ref: &fn(cr: &cairo::Context, width: f64, height: f64) =
+        &(draw as fn(cr: &cairo::Context, width: f64, height: f64));
 
-    let window = platform::Window::new(&events_loop, draw);
+    {
+        let mut events_loop = winit::EventsLoop::new();
+        let window = platform::Window::new(&events_loop, draw_ref);
 
-    events_loop.run_forever(|event| match event {
-        winit::Event::WindowEvent {
-            event: winit::WindowEvent::Refresh,
-            ..
-        } => {
-            window.refresh();
-            winit::ControlFlow::Continue
-        }
-        winit::Event::WindowEvent {
-            event: winit::WindowEvent::CloseRequested,
-            ..
-        } => winit::ControlFlow::Break,
-        _ => winit::ControlFlow::Continue,
-    });
+        events_loop.run_forever(|event| match event {
+            winit::Event::WindowEvent {
+                event: winit::WindowEvent::Refresh,
+                ..
+            } => {
+                window.refresh();
+                winit::ControlFlow::Continue
+            }
+            winit::Event::WindowEvent {
+                event: winit::WindowEvent::CloseRequested,
+                ..
+            } => winit::ControlFlow::Break,
+            _ => winit::ControlFlow::Continue,
+        })
+    }
 }
