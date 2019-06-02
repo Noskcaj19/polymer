@@ -31,11 +31,9 @@ fn main() {
 
     let polymer = Polymer { config };
 
-    let draw_ref: &DrawFn = &(draw as DrawFn);
-
     {
         let mut events_loop = winit::EventsLoop::new();
-        let window = platform::Window::new(&events_loop, &polymer, draw_ref);
+        let window = platform::Window::new(&events_loop, &polymer, &(draw as DrawFn));
 
         events_loop.run_forever(|event| match event {
             winit::Event::WindowEvent {

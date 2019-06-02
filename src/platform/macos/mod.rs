@@ -75,9 +75,7 @@ impl Window {
             let render_view: id = msg_send![render_view, initWithFrame: view_frame];
 
             // Make draw function available in the drawing callback
-            let fn_ptr = draw as *const DrawFn;
-            (*render_view).set_ivar("drawFn", fn_ptr as *const c_void);
-
+            (*render_view).set_ivar("drawFn", draw as *const _ as *const c_void);
             (*render_view).set_ivar("polymer", polymer as *const _ as *const c_void);
 
             msg_send![ns_view, addSubview: render_view];
