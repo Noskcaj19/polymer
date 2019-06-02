@@ -1,9 +1,10 @@
 use std::fs::DirBuilder;
+use std::path::PathBuf;
 
-pub struct Config {}
+pub struct Config;
 
 impl Config {
-    pub fn load() -> Option<Config> {
+    pub fn read() -> Option<String> {
         let config_path = Config::config_path()?;
 
         if !config_path.exists() {
@@ -13,24 +14,23 @@ impl Config {
                 .ok()?;
 
             std::fs::write(&config_path, DEFAULT_CONFIG).ok()?;
+            Some(DEFAULT_CONFIG.to_owned())
+        } else {
+            std::fs::read_to_string(config_path).ok()
         }
-
-        let config_str = std::fs::read_to_string(config_path).ok()?;
-
-        Some(Config {})
     }
 
-    pub fn config_path() -> Option<std::path::PathBuf> {
-        Config::data_root().map(|h| h.join("config.toml"))
+    pub fn config_path() -> Option<PathBuf> {
+        Config::data_root().map(|h| h.join("polymer.lua"))
     }
 
     #[cfg(target_os = "macos")]
-    pub fn data_root() -> Option<std::path::PathBuf> {
+    pub fn data_root() -> Option<PathBuf> {
         dirs::home_dir().map(|h| h.join(".config/polymer/"))
     }
 
     #[cfg(not(target_os = "macos"))]
-    pub fn data_root() -> Option<std::path::PathBuf> {
+    pub fn data_root() -> Option<PathBuf> {
         dirs::config_dir().map(|h| h.join("polymer/"))
     }
 }

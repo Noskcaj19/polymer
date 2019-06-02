@@ -10,7 +10,6 @@ pub use config::Config;
 pub type DrawFn = fn(poly: &crate::Polymer, cr: &cairo::Context, width: f64, height: f64);
 
 pub struct Polymer {
-    config: Config,
     lua: Lua,
 }
 
@@ -38,37 +37,23 @@ fn draw(polymer: &Polymer, cr: &cairo::Context, width: f64, height: f64) {
                 get_context_fn.call((rlua::LightUserData(cairo_surface_ptr as *mut _),))?;
 
             let lua_polymer = lua.create_table()?;
-            lua_polymer.set("cr", context)?;
             lua_polymer.set("width", width)?;
             lua_polymer.set("height", height)?;
 
             let globals = lua.globals();
             globals.set("polymer", lua_polymer)?;
 
+            // Get the global draw function and call it with the lgi cairo context
+            let draw_fn: Function = globals.get("draw")?;
+            draw_fn.call::<_, ()>(context)?;
+
             Ok(())
         })
         .expect("Unable to setup cairo context in lua");
-
-    polymer.lua.context(|lua| {
-        let src = r#"
-        local cairo = require('lgi').cairo
-        local cr = polymer.cr
-
-        cr:set_line_width(10)
-
-        local r, g, b = 1, 0, 0
-
-        cr:set_source_rgb(r, g, b)
-        cr:rectangle(100, 100, polymer.width - 200, polymer.height - 200);
-        cr:stroke()
-        "#;
-
-        lua.load(src).exec().unwrap();
-    });
 }
 
 fn main() {
-    let config = match config::Config::load() {
+    let config = match Config::read() {
         Some(config) => config,
         None => {
             eprintln!("Unable to load config file");
@@ -76,10 +61,13 @@ fn main() {
         }
     };
 
-    let polymer = Polymer {
-        config,
-        lua: Lua::new(),
-    };
+    let polymer = Polymer { lua: Lua::new() };
+
+    if let Err(e) = polymer.lua.context(|lua| lua.load(&config).exec()) {
+        eprintln!("Error loading user config file:\n");
+        eprintln!("{}", e);
+        std::process::exit(2);
+    }
 
     {
         let mut events_loop = winit::EventsLoop::new();
