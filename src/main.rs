@@ -4,6 +4,7 @@ use rlua::{Function, Lua};
 
 mod config;
 mod platform;
+mod signals;
 
 pub use config::Config;
 
@@ -11,6 +12,24 @@ pub type DrawFn = fn(poly: &crate::Polymer, cr: &cairo::Context, width: f64, hei
 
 pub struct Polymer {
     lua: Lua,
+}
+
+fn init_lua(polymer: &Polymer) -> rlua::Result<()> {
+    polymer.lua.context(|lua| {
+        lua.set_named_registry_value(signals::GLOBAL_SIGNALS, lua.create_table()?)?;
+
+        let connect_signal = lua.create_function(signals::connect_signal)?;
+        let emit_signal = lua.create_function(signals::emit_signal)?;
+
+        let polymer_table = lua.create_table()?;
+
+        polymer_table.set("connect_signal", connect_signal)?;
+        polymer_table.set("emit_signal", emit_signal)?;
+
+        lua.globals().set("polymer", polymer_table)?;
+
+        Ok(())
+    })
 }
 
 fn draw(polymer: &Polymer, cr: &cairo::Context, width: f64, height: f64) {
@@ -21,7 +40,6 @@ fn draw(polymer: &Polymer, cr: &cairo::Context, width: f64, height: f64) {
             // so get the cairo surface attached to the context and then create the context with lua
 
             let surface = cr.get_target();
-
             let cairo_surface_ptr = surface.to_raw_none();
 
             let get_context_fn: Function = lua
@@ -36,16 +54,12 @@ fn draw(polymer: &Polymer, cr: &cairo::Context, width: f64, height: f64) {
             let context: rlua::Value =
                 get_context_fn.call((rlua::LightUserData(cairo_surface_ptr as *mut _),))?;
 
-            let lua_polymer = lua.create_table()?;
-            lua_polymer.set("width", width)?;
-            lua_polymer.set("height", height)?;
+            let draw_ctx = lua.create_table()?;
+            draw_ctx.set("width", width)?;
+            draw_ctx.set("height", height)?;
 
-            let globals = lua.globals();
-            globals.set("polymer", lua_polymer)?;
-
-            // Get the global draw function and call it with the lgi cairo context
-            let draw_fn: Function = globals.get("draw")?;
-            draw_fn.call::<_, ()>(context)?;
+            // Emit the draw signal
+            signals::emit_signal_inner(lua, "draw", (context, draw_ctx))?;
 
             Ok(())
         })
@@ -62,6 +76,8 @@ fn main() {
     };
 
     let polymer = Polymer { lua: Lua::new() };
+
+    init_lua(&polymer).unwrap();
 
     if let Err(e) = polymer.lua.context(|lua| lua.load(&config).exec()) {
         eprintln!("Error loading user config file:\n");
