@@ -28,6 +28,17 @@ fn init_lua(polymer: &Polymer) -> rlua::Result<()> {
 
         lua.globals().set("polymer", polymer_table)?;
 
+        // Append the config dir to the lua require search path
+        let package: rlua::Table = lua.globals().get("package")?;
+        let path: String = package.get("path")?;
+
+        let config_dir = Config::data_root().unwrap();
+
+        package.set(
+            "path",
+            format!("{};{}", config_dir.join("?.lua").to_str().unwrap(), path),
+        )?;
+
         Ok(())
     })
 }
