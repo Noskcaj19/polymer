@@ -1,5 +1,3 @@
-#![feature(maybe_uninit)]
-
 use rlua::{Function, Lua};
 
 mod config;
