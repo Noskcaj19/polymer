@@ -28,6 +28,10 @@ extern "C" fn draw_rect(this: &Object, _cmd: Sel, _rect: NSRect) {
         let current: id = msg_send![class!(NSGraphicsContext), currentContext];
         let context: id = msg_send![current, CGContext];
 
+        let context_ref = context as *mut core_graphics::context::CGContextRef;
+        (*context_ref).translate(0.0, height);
+        (*context_ref).scale(1.0, -1.0);
+
         let surface = cairo::QuartzSurface::create_for_cg_context(
             context as *mut std::ffi::c_void,
             width as u32,
