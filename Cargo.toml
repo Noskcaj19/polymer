@@ -16,7 +16,7 @@ default-features = false
 features = ["system-lua"]
 
 [dependencies.cairo-rs]
-version = "0.6.0"
+version = "0.7.0"
 # We don't need glib
 default-features = false
 
