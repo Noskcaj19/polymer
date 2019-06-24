@@ -32,10 +32,17 @@ fn init_lua(polymer: &Polymer) -> rlua::Result<()> {
 
         let config_dir = Config::data_root().unwrap();
 
-        package.set(
-            "path",
-            format!("{};{}", config_dir.join("?.lua").to_str().unwrap(), path),
-        )?;
+        // TODO: Temporary - move libs to config dir?
+        let poly_libs = concat!(env!("CARGO_MANIFEST_DIR"), "/lib/?.lua");
+
+        let package_path = format!(
+            "{};{};{}",
+            config_dir.join("?.lua").to_str().unwrap(),
+            poly_libs,
+            path
+        );
+
+        package.set("path", package_path)?;
 
         Ok(())
     })
