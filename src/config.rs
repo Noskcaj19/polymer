@@ -21,7 +21,7 @@ impl Config {
     }
 
     pub fn config_path() -> Option<PathBuf> {
-        Config::data_root().map(|h| h.join("polymer.lua"))
+        Config::data_root().map(|h| h.join("config.lua"))
     }
 
     #[cfg(target_os = "macos")]

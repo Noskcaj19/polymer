@@ -24,7 +24,7 @@ fn init_lua(polymer: &Polymer) -> rlua::Result<()> {
         polymer_table.set("connect_signal", connect_signal)?;
         polymer_table.set("emit_signal", emit_signal)?;
 
-        lua.globals().set("polymer", polymer_table)?;
+        lua.globals().set("__polymer_sys", polymer_table)?;
 
         // Append the config dir to the lua require search path
         let package: rlua::Table = lua.globals().get("package")?;
