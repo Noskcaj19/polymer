@@ -5,6 +5,7 @@ use rlua::{Function, Lua, Table};
 mod config;
 mod platform;
 mod signals;
+mod sys;
 
 pub use config::Config;
 
@@ -29,12 +30,18 @@ fn init_lua(polymer: &Polymer) -> rlua::Result<()> {
                 end"#,
             )
             .eval()?;
+        let lua_info = lua.create_function(sys::lua_info)?;
+        let lua_warn = lua.create_function(sys::lua_warn)?;
+        let lua_error = lua.create_function(sys::lua_error)?;
 
         let polymer_table = lua.create_table()?;
 
         polymer_table.set("connect_signal", connect_signal)?;
         polymer_table.set("emit_signal", emit_signal)?;
         polymer_table.set("context_from_surface", context_from_surface)?;
+        polymer_table.set("info", lua_info)?;
+        polymer_table.set("warn", lua_warn)?;
+        polymer_table.set("error", lua_error)?;
 
         lua.globals().set("__polymer_sys", polymer_table)?;
 
