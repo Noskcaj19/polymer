@@ -1,3 +1,5 @@
+use log::{debug, error, info, trace};
+
 use rlua::{Function, Lua};
 
 mod config;
@@ -31,16 +33,15 @@ fn init_lua(polymer: &Polymer) -> rlua::Result<()> {
         let path: String = package.get("path")?;
 
         let config_dir = Config::data_root().unwrap();
+        let config_path = config_dir.join("?.lua").to_str().unwrap().to_owned();
 
         // TODO: Temporary - move libs to config dir?
         let poly_libs = concat!(env!("CARGO_MANIFEST_DIR"), "/lib/?.lua");
 
-        let package_path = format!(
-            "{};{};{}",
-            config_dir.join("?.lua").to_str().unwrap(),
-            poly_libs,
-            path
-        );
+        debug!("[init] extended lua path: {:#?}", config_path);
+        debug!("[init] extended lua path: {:#?}", poly_libs);
+
+        let package_path = format!("{};{};{}", config_path, poly_libs, path);
 
         package.set("path", package_path)?;
 
@@ -83,6 +84,8 @@ fn draw(polymer: &Polymer, cr: &cairo::Context, width: f64, height: f64) {
 }
 
 fn main() {
+    pretty_env_logger::init();
+
     let config = match Config::read() {
         Some(config) => config,
         None => {
@@ -96,6 +99,7 @@ fn main() {
     init_lua(&polymer).unwrap();
 
     if let Err(e) = polymer.lua.context(|lua| lua.load(&config).exec()) {
+        error!("[config] Error loading config");
         eprintln!("Error loading user config file:\n");
         eprintln!("{}", e);
         std::process::exit(2);
@@ -110,13 +114,17 @@ fn main() {
                 event: winit::WindowEvent::Refresh,
                 ..
             } => {
+                trace!("[events] Redrawing");
                 window.refresh();
                 winit::ControlFlow::Continue
             }
             winit::Event::WindowEvent {
                 event: winit::WindowEvent::CloseRequested,
                 ..
-            } => winit::ControlFlow::Break,
+            } => {
+                info!("[events] Closing");
+                winit::ControlFlow::Break
+            }
             _ => winit::ControlFlow::Continue,
         })
     }

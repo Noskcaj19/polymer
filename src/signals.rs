@@ -20,7 +20,7 @@ pub fn connect_signal<'lua>(
         handlers.set(name.as_str(), table)?;
         count = 1;
     }
-    trace!("Connecting signal {} ({})", name, count);
+    trace!("[signal] connecting signal {} ({})", name, count);
     Ok(())
 }
 
@@ -29,6 +29,7 @@ pub fn emit_signal_inner<'lua, A: ToLuaMulti<'lua> + Clone>(
     name: &str,
     args: A,
 ) -> rlua::Result<()> {
+    trace!("[signal] emitting signal: {:?}", name);
     let handlers = lua.named_registry_value::<_, Table>(GLOBAL_SIGNALS)?;
 
     if let Ok(Value::Table(table)) = handlers.get::<_, Value>(name.clone()) {
@@ -37,7 +38,7 @@ pub fn emit_signal_inner<'lua, A: ToLuaMulti<'lua> + Clone>(
                 match func.call(args.clone()) {
                     Ok(()) => {}
                     Err(e) => {
-                        error!("Error while emitting signal {}: {}", name, e);
+                        error!("[signal] error while emitting signal {}: {}", name, e);
                     }
                 };
             }
