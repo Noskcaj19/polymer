@@ -51,7 +51,11 @@ extern "C" fn draw_rect(this: &Object, _cmd: Sel, _rect: NSRect) {
 }
 
 impl Window {
-    pub fn new(events_loop: &EventLoop<()>, polymer: &Polymer, draw: &DrawFn) -> Window {
+    pub fn new(
+        event_loop: &EventLoop<crate::PolymerWindowEvent>,
+        polymer: &Polymer,
+        draw: &DrawFn,
+    ) -> Window {
         let window = WindowBuilder::new()
             .with_transparent(true)
             .with_activation_policy(winit::platform::macos::ActivationPolicy::Accessory)
@@ -62,7 +66,7 @@ impl Window {
             .with_titlebar_buttons_hidden(true)
             .with_titlebar_hidden(true)
             .with_decorations(false)
-            .build(&events_loop)
+            .build(&event_loop)
             .unwrap();
 
         window.set_simple_fullscreen(true);

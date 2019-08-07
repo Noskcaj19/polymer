@@ -1,18 +1,22 @@
 use log::{debug, error, trace};
-
 use rlua::{Function, Lua, Table};
-
 use winit::{
     event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
+    event_loop::{ControlFlow, EventLoop, EventLoopProxy},
 };
 
 mod config;
 mod platform;
 mod signals;
 mod sys;
+mod timeout;
 
 pub use config::Config;
+
+#[derive(Debug)]
+pub enum PolymerWindowEvent {
+    Timer(i64),
+}
 
 pub type DrawFn = fn(poly: &crate::Polymer, cr: &cairo::Context, width: f64, height: f64);
 
@@ -20,10 +24,19 @@ pub struct Polymer {
     lua: Lua,
 }
 
-fn init_lua(polymer: &Polymer) -> rlua::Result<()> {
+fn init_lua(polymer: &Polymer, proxy: EventLoopProxy<PolymerWindowEvent>) -> rlua::Result<()> {
     polymer.lua.context(|lua| {
+        // TODO: Clean up proxy passing
+        let proxy = Box::new(proxy);
+        let proxy_ref = Box::leak(proxy);
+        lua.set_named_registry_value(
+            timeout::TIMEOUTS_EVENT_PROXY,
+            rlua::LightUserData(proxy_ref as *mut _ as *mut _),
+        )?;
+        lua.set_named_registry_value(timeout::TIMEOUTS, lua.create_table()?)?;
         lua.set_named_registry_value(signals::GLOBAL_SIGNALS, lua.create_table()?)?;
 
+        let add_timer = lua.create_function(timeout::add_timer)?;
         let connect_signal = lua.create_function(signals::connect_signal)?;
         let emit_signal = lua.create_function(signals::emit_signal)?;
         let context_from_surface: Function = lua
@@ -41,6 +54,7 @@ fn init_lua(polymer: &Polymer) -> rlua::Result<()> {
 
         let polymer_table = lua.create_table()?;
 
+        polymer_table.set("add_timer", add_timer)?;
         polymer_table.set("connect_signal", connect_signal)?;
         polymer_table.set("emit_signal", emit_signal)?;
         polymer_table.set("context_from_surface", context_from_surface)?;
@@ -114,18 +128,18 @@ fn main() {
 
     let polymer = Polymer { lua: Lua::new() };
 
-    init_lua(&polymer).unwrap();
-
-    if let Err(e) = polymer.lua.context(|lua| lua.load(&config).exec()) {
-        error!("[config] Error loading config");
-        eprintln!("Error loading user config file:\n");
-        eprintln!("{}", e);
-        std::process::exit(2);
-    }
-
     {
-        let event_loop = EventLoop::new();
+        let event_loop = EventLoop::new_user_event();
         let window = platform::Window::new(&event_loop, &polymer, &(draw as DrawFn));
+
+        init_lua(&polymer, event_loop.create_proxy()).unwrap();
+
+        if let Err(e) = polymer.lua.context(|lua| lua.load(&config).exec()) {
+            error!("[config] Error loading config");
+            eprintln!("Error loading user config file:\n");
+            eprintln!("{}", e);
+            std::process::exit(2);
+        }
 
         event_loop.run(move |event, _, control_flow| match event {
             Event::WindowEvent {
@@ -135,6 +149,18 @@ fn main() {
                 trace!("[events] Redrawing");
                 window.refresh();
             }
+            Event::UserEvent(event) => match event {
+                PolymerWindowEvent::Timer(index) => {
+                    polymer.lua.context(|lua| {
+                        let timeouts = lua
+                            .named_registry_value::<_, rlua::Table>(timeout::TIMEOUTS)
+                            .unwrap();
+                        let cb = timeouts.raw_get::<_, Function>(index).unwrap();
+                        let () = cb.call(()).unwrap();
+                    });
+                }
+            },
+
             _ => {
                 *control_flow = ControlFlow::Wait;
             }
