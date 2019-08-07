@@ -8,12 +8,14 @@ use objc::{
     sel, sel_impl,
 };
 use std::os::raw::c_void;
-use winit::os::macos::{WindowBuilderExt, WindowExt};
+use winit::platform::macos::{WindowBuilderExtMacOS, WindowExtMacOS};
+use winit::window::{Window as WinitWindow, WindowBuilder};
 
 use crate::{DrawFn, Polymer};
+use winit::event_loop::EventLoop;
 
 pub struct Window {
-    pub window: winit::Window,
+    pub window: WinitWindow,
     render_view: *mut Object,
 }
 
@@ -49,10 +51,10 @@ extern "C" fn draw_rect(this: &Object, _cmd: Sel, _rect: NSRect) {
 }
 
 impl Window {
-    pub fn new(events_loop: &winit::EventsLoop, polymer: &Polymer, draw: &DrawFn) -> Window {
-        let window = winit::WindowBuilder::new()
-            .with_transparency(true)
-            .with_activation_policy(winit::os::macos::ActivationPolicy::Accessory)
+    pub fn new(events_loop: &EventLoop<()>, polymer: &Polymer, draw: &DrawFn) -> Window {
+        let window = WindowBuilder::new()
+            .with_transparent(true)
+            .with_activation_policy(winit::platform::macos::ActivationPolicy::Accessory)
             // If these aren't added it causes drop shadows and borders
             // we don't want that
             .with_resizable(false)
@@ -65,12 +67,12 @@ impl Window {
 
         window.set_simple_fullscreen(true);
 
-        let ns_window = window.get_nswindow() as id;
+        let ns_window = window.ns_window() as id;
         make_background(ns_window);
 
         let render_view_class = make_draw_view_class();
 
-        let ns_view = window.get_nsview() as id;
+        let ns_view = window.ns_view() as id;
 
         let render_view = unsafe {
             let view_frame = cocoa::appkit::NSView::frame(ns_view);

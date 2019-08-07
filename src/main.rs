@@ -1,6 +1,11 @@
-use log::{debug, error, info, trace};
+use log::{debug, error, trace};
 
 use rlua::{Function, Lua, Table};
+
+use winit::{
+    event::{Event, WindowEvent},
+    event_loop::{ControlFlow, EventLoop},
+};
 
 mod config;
 mod platform;
@@ -119,26 +124,20 @@ fn main() {
     }
 
     {
-        let mut events_loop = winit::EventsLoop::new();
-        let window = platform::Window::new(&events_loop, &polymer, &(draw as DrawFn));
+        let event_loop = EventLoop::new();
+        let window = platform::Window::new(&event_loop, &polymer, &(draw as DrawFn));
 
-        events_loop.run_forever(|event| match event {
-            winit::Event::WindowEvent {
-                event: winit::WindowEvent::Refresh,
+        event_loop.run(move |event, _, control_flow| match event {
+            Event::WindowEvent {
+                event: WindowEvent::RedrawRequested,
                 ..
             } => {
                 trace!("[events] Redrawing");
                 window.refresh();
-                winit::ControlFlow::Continue
             }
-            winit::Event::WindowEvent {
-                event: winit::WindowEvent::CloseRequested,
-                ..
-            } => {
-                info!("[events] Closing");
-                winit::ControlFlow::Break
+            _ => {
+                *control_flow = ControlFlow::Wait;
             }
-            _ => winit::ControlFlow::Continue,
-        })
+        });
     }
 }
