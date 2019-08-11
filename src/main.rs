@@ -5,10 +5,10 @@ use winit::{
     event_loop::{ControlFlow, EventLoop, EventLoopProxy},
 };
 
+mod bindings;
 mod config;
 mod platform;
 mod signals;
-mod sys;
 mod timeout;
 
 pub use config::Config;
@@ -36,33 +36,8 @@ fn init_lua(polymer: &Polymer, proxy: EventLoopProxy<PolymerWindowEvent>) -> rlu
         lua.set_named_registry_value(timeout::TIMEOUTS, lua.create_table()?)?;
         lua.set_named_registry_value(signals::GLOBAL_SIGNALS, lua.create_table()?)?;
 
-        let add_timer = lua.create_function(timeout::add_timer)?;
-        let connect_signal = lua.create_function(signals::connect_signal)?;
-        let emit_signal = lua.create_function(signals::emit_signal)?;
-        let context_from_surface: Function = lua
-            .load(
-                r#"
-                function(surface)
-                    local cairo = require('lgi').cairo
-                    return cairo.Context(cairo.Surface(surface))
-                end"#,
-            )
-            .eval()?;
-        let lua_info = lua.create_function(sys::lua_info)?;
-        let lua_warn = lua.create_function(sys::lua_warn)?;
-        let lua_error = lua.create_function(sys::lua_error)?;
-
-        let polymer_table = lua.create_table()?;
-
-        polymer_table.set("add_timer", add_timer)?;
-        polymer_table.set("connect_signal", connect_signal)?;
-        polymer_table.set("emit_signal", emit_signal)?;
-        polymer_table.set("context_from_surface", context_from_surface)?;
-        polymer_table.set("info", lua_info)?;
-        polymer_table.set("warn", lua_warn)?;
-        polymer_table.set("error", lua_error)?;
-
-        lua.globals().set("__polymer_sys", polymer_table)?;
+        let polymer_bindings = bindings::create_bindings(&lua)?;
+        lua.globals().set("__polymer_sys", polymer_bindings)?;
 
         // Append the config dir to the lua require search path
         let package: rlua::Table = lua.globals().get("package")?;
