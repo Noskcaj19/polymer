@@ -1,5 +1,5 @@
 use log::{debug, error, trace};
-use rlua::{Function, Lua, Table};
+use rlua::{Function, Lua};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop, EventLoopProxy},
@@ -70,10 +70,8 @@ fn draw(polymer: &Polymer, cr: &cairo::Context, width: f64, height: f64) {
             let surface = cr.get_target();
             let cairo_surface_ptr = surface.to_raw_none();
 
-            let get_context_fn: Function = lua
-                .globals()
-                .get::<_, Table>("__polymer_sys")?
-                .get("context_from_surface")?;
+            let get_context_fn: Function =
+                lua.named_registry_value(bindings::CONTEXT_FROM_SURFACE_KEY)?;
 
             let context: rlua::Value =
                 get_context_fn.call((rlua::LightUserData(cairo_surface_ptr as *mut _),))?;

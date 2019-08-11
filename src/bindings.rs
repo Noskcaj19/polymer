@@ -1,6 +1,8 @@
 use crate::{signals, timeout};
 use rlua::{Context, Function, Table};
 
+pub const CONTEXT_FROM_SURFACE_KEY: &str = "POLYMER_CONTEXT_FROM_SURFACE";
+
 pub fn create_bindings<'lua>(lua: &Context<'lua>) -> rlua::Result<Table<'lua>> {
     let polymer_table = lua.create_table()?;
     let context_from_surface: Function = lua
@@ -13,7 +15,8 @@ pub fn create_bindings<'lua>(lua: &Context<'lua>) -> rlua::Result<Table<'lua>> {
         )
         .eval()?;
 
-    polymer_table.set("context_from_surface", context_from_surface)?;
+    lua.set_named_registry_value(CONTEXT_FROM_SURFACE_KEY, context_from_surface)?;
+
     polymer_table.set("add_timer", lua.create_function(timeout::add_timer)?)?;
     polymer_table.set(
         "connect_signal",
