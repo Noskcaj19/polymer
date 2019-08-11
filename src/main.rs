@@ -81,7 +81,7 @@ fn draw(polymer: &Polymer, cr: &cairo::Context, width: f64, height: f64) {
             draw_ctx.set("height", height)?;
 
             // Emit the draw signal
-            signals::emit_signal_inner(lua, "draw", (context, draw_ctx))?;
+            signals::emit_signal_inner(lua, "redraw_requested", (context, draw_ctx))?;
 
             Ok(())
         })
