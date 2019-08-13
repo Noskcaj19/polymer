@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 #[derive(Debug)]
 pub enum PolymerWindowEvent {
+    RedrawRequested,
     Timer(i64),
 }
 
@@ -132,6 +133,9 @@ fn main() {
                         let cb = timeouts.raw_get::<_, Function>(index).unwrap();
                         let () = cb.call(()).unwrap();
                     });
+                }
+                PolymerWindowEvent::RedrawRequested => {
+                    window.window.request_redraw();
                 }
             },
 
