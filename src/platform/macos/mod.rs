@@ -8,11 +8,14 @@ use objc::{
     sel, sel_impl,
 };
 use std::os::raw::c_void;
-use winit::platform::macos::{WindowBuilderExtMacOS, WindowExtMacOS};
-use winit::window::{Window as WinitWindow, WindowBuilder};
+use std::sync::Arc;
+use winit::{
+    event_loop::EventLoop,
+    platform::macos::{WindowBuilderExtMacOS, WindowExtMacOS},
+    window::{Window as WinitWindow, WindowBuilder},
+};
 
 use crate::{DrawFn, Polymer};
-use winit::event_loop::EventLoop;
 
 pub struct Window {
     pub window: WinitWindow,
@@ -53,7 +56,7 @@ extern "C" fn draw_rect(this: &Object, _cmd: Sel, _rect: NSRect) {
 impl Window {
     pub fn new(
         event_loop: &EventLoop<crate::PolymerWindowEvent>,
-        polymer: &Polymer,
+        polymer: Arc<Polymer>,
         draw: &DrawFn,
     ) -> Window {
         let window = WindowBuilder::new()
@@ -86,7 +89,7 @@ impl Window {
 
             // Make draw function available in the drawing callback
             (*render_view).set_ivar("drawFn", draw as *const _ as *const c_void);
-            (*render_view).set_ivar("polymer", polymer as *const _ as *const c_void);
+            (*render_view).set_ivar("polymer", &*polymer as *const _ as *const c_void);
 
             msg_send![ns_view, addSubview: render_view];
             render_view

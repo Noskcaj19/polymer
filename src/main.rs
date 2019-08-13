@@ -12,6 +12,7 @@ mod signals;
 mod timeout;
 
 pub use config::Config;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub enum PolymerWindowEvent {
@@ -99,11 +100,11 @@ fn main() {
         }
     };
 
-    let polymer = Polymer { lua: Lua::new() };
+    let polymer = Arc::new(Polymer { lua: Lua::new() });
 
     {
         let event_loop = EventLoop::new_user_event();
-        let window = platform::Window::new(&event_loop, &polymer, &(draw as DrawFn));
+        let window = platform::Window::new(&event_loop, Arc::clone(&polymer), &(draw as DrawFn));
 
         init_lua(&polymer, event_loop.create_proxy()).unwrap();
 
