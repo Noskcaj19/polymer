@@ -91,7 +91,7 @@ impl Window {
             (*render_view).set_ivar("drawFn", draw as *const _ as *const c_void);
             (*render_view).set_ivar("polymer", &*polymer as *const _ as *const c_void);
 
-            msg_send![ns_view, addSubview: render_view];
+            let _: () = msg_send![ns_view, addSubview: render_view];
             render_view
         };
 
@@ -103,7 +103,7 @@ impl Window {
 
     pub fn refresh(&self) {
         unsafe {
-            msg_send![self.render_view, setNeedsDisplay: true];
+            let _: () = msg_send![self.render_view, setNeedsDisplay: true];
         }
     }
 }
@@ -127,18 +127,18 @@ pub fn make_background(ns_window: id) {
     let ns_window = ns_window as id;
 
     unsafe {
-        msg_send![ns_window, setOpaque: false];
-        msg_send![ns_window, setLevel: -1];
+        let _: () = msg_send![ns_window, setOpaque: false];
+        let _: () = msg_send![ns_window, setLevel: -1];
 
         let behaviors = NSWindowCollectionBehavior::NSWindowCollectionBehaviorTransient
             | NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces
             | NSWindowCollectionBehavior::NSWindowCollectionBehaviorIgnoresCycle;
-        msg_send![ns_window, setCollectionBehavior: behaviors];
+        let _: () = msg_send![ns_window, setCollectionBehavior: behaviors];
 
-        msg_send![ns_window, setRestorable: false];
-        msg_send![ns_window, disableSnapshotRestoration];
-        msg_send![ns_window, setDisplaysWhenScreenProfileChanges: true];
-        msg_send![ns_window, setReleasedWhenClosed: false];
-        msg_send![ns_window, setIgnoresMouseEvents: true];
+        let _: () = msg_send![ns_window, setRestorable: false];
+        let _: () = msg_send![ns_window, disableSnapshotRestoration];
+        let _: () = msg_send![ns_window, setDisplaysWhenScreenProfileChanges: true];
+        let _: () = msg_send![ns_window, setReleasedWhenClosed: false];
+        let _: () = msg_send![ns_window, setIgnoresMouseEvents: true];
     }
 }

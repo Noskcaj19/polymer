@@ -1,7 +1,7 @@
 use log::{debug, error, trace};
 use rlua::{Function, Lua};
 use winit::{
-    event::{Event, WindowEvent},
+    event::Event,
     event_loop::{ControlFlow, EventLoop, EventLoopProxy},
 };
 
@@ -104,7 +104,7 @@ fn main() {
     let polymer = Arc::new(Polymer { lua: Lua::new() });
 
     {
-        let event_loop = EventLoop::new_user_event();
+        let event_loop = EventLoop::with_user_event();
         let window = platform::Window::new(&event_loop, Arc::clone(&polymer), &(draw as DrawFn));
 
         init_lua(&polymer, event_loop.create_proxy()).unwrap();
@@ -117,10 +117,7 @@ fn main() {
         }
 
         event_loop.run(move |event, _, control_flow| match event {
-            Event::WindowEvent {
-                event: WindowEvent::RedrawRequested,
-                ..
-            } => {
+            Event::RedrawRequested(_) => {
                 trace!("[events] Redrawing");
                 window.refresh();
             }

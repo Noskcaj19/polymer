@@ -4,6 +4,7 @@ use std::time::Duration;
 use winit::event_loop::EventLoopProxy;
 
 pub const TIMEOUTS: &str = "POLYMER_TIMEOUTS";
+// TODO: Just clone this value around?
 pub const TIMEOUTS_EVENT_PROXY: &str = "POLYMER_EVENT_LOOP_PROXY";
 
 pub fn add_timer<'lua>(
@@ -15,7 +16,7 @@ pub fn add_timer<'lua>(
     timers.raw_set(index, cb)?;
 
     let rlua::LightUserData(proxy) = lua.named_registry_value(TIMEOUTS_EVENT_PROXY)?;
-    let proxy = unsafe { &*(proxy as *mut EventLoopProxy<PolymerWindowEvent>) };
+    let proxy = unsafe { &*(proxy as *mut EventLoopProxy<PolymerWindowEvent>) }.clone();
 
     // TODO: Currently one thread per timer, implement scheduling
     std::thread::spawn(move || loop {
